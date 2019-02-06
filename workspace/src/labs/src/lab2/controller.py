@@ -31,7 +31,8 @@ class PID():
 	
 	def acc_calculate(self, speed_reference, speed_current):
 			 
-	 	acc = TODO
+		# TODO: fix this
+	 	acc = kp*(speed_reference-speed_current) + ki*(integral) + kd*(speed_reference-speed_current)
 
 	 	return acc
 	
