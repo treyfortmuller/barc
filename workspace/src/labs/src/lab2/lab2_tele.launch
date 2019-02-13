@@ -1,0 +1,16 @@
+<launch>
+    <!-- SYSTEM MODEL -->
+    <!-- vehicle parameters -->
+    <param name="mass" type="double" value="2000" />
+
+    <!-- control parameters -->
+    <param name="air_drag_coeff" type="double" value="0.01308" />
+    <param name="friction" type="double" value="0.01711" />
+
+    <!-- Keyboard Relay -->
+    <node pkg="labs" type="car_teleop.py" name="barc_teleop" />
+
+    <!-- Simulator -->
+    <node pkg="labs" type="vehicle_simulator.py" name="simulator" />
+
+</launch>
