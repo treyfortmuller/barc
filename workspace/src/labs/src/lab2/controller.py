@@ -13,7 +13,7 @@ v_y = 0
 	
 # ecu command update
 def measurements_callback(data):
- 	global x, y, psi, v_x, v_y, psi_dot
+	global x, y, psi, v_x, v_y, psi_dot
 	x = data.x
 	y = data.y
 	psi = data.psi 
@@ -28,14 +28,19 @@ class PID():
 		self.kp = kp
 		self.ki = ki
 		self.kd = kd
-	
-	def acc_calculate(self, speed_reference, speed_current):
-			 
-		# TODO: fix this
-	 	acc = kp*(speed_reference-speed_current) + ki*(integral) + kd*(speed_reference-speed_current)
+		self.integrator = 0
+		self.error_prev = 0
 
-	 	return acc
-	
+	def acc_calculate(self, speed_reference, speed_current):
+
+		self.integrator += self.error_prev
+		error_current = speed_reference-speed_current
+
+		acc = self.kp*(error_current) + self.ki*(self.integrator) + self.kd*(error_current - self.error_prev)
+
+		self.error_prev = error_current
+
+		return acc
 # ==========end of the controller==============#
 	
 # controller node
@@ -61,18 +66,18 @@ def controller():
 	v_ref = 8 # reference speed is 8 m/s
 	
 	# Initialize the PID controller with your tuned gains
-	PID_control = PID(kp=0.5, ki=0.5, kd=0.5)
+	PID_control = PID(kp=5, ki=1, kd=10) # D=8
 	
 	while not rospy.is_shutdown():
 		# acceleration calculated from PID controller.
-	 	acc = PID_control.acc_calculate(v_ref, v_x)
-	 
-	 	# steering angle
-	 	d_f = 0.0
-	
+		acc = PID_control.acc_calculate(v_ref, v_x)
+
+		# steering angle
+		d_f = 0.0
+
 		# publish information
-	 	state_pub.publish( ECU(acc, d_f) )
-	
+		state_pub.publish( ECU(acc, d_f) )
+
 		# wait
 		rate.sleep()
 	
