@@ -11,7 +11,40 @@ t0          = time.time()
 r_tire      = 0.05 # radius of the tire
 servo_pwm   = 1580.0
 motor_pwm   = 1500.0
-motor_pwm_offset = 1500.0
+
+motor_pwm_offset = 1580.0
+
+# reference speed 
+v_ref = 0.5 # reference speed is 0.5 m/s
+
+# encoder measurement update
+def enc_callback(data):
+    global t0, v_meas
+    global n_FL, n_FR, n_BL, n_BR
+    global ang_km1, ang_km2
+
+    n_FL = data.FL
+    n_FR = data.FR
+    n_BL = data.BL
+    n_BR = data.BR
+
+    # compute the average encoder measurement
+    n_mean = (n_FL + n_FR)/2
+
+    # transfer the encoder measurement to angular displacement
+    ang_mean = n_mean*2*pi/8
+
+    # compute time elapsed
+    tf = time.time()
+    dt = tf - t0
+    
+    # compute speed with second-order, backwards-finite-difference estimate
+    v_meas    = r_tire*(ang_mean - 4*ang_km1 + 3*ang_km2)/(dt)
+    rospy.logwarn("velocity = {}".format(v_meas))
+    # update old data
+    ang_km1 = ang_mean
+    ang_km2 = ang_km1
+    t0      = time.time()
 
 # reference speed 
 v_ref = 0.5 # give reference speed is 0.5 m/s
@@ -53,23 +86,21 @@ def controller():
     # Initialize node:
     rospy.init_node('simulationGain', anonymous=True)
 
+    # topic subscriptions / publications
     rospy.Subscriber('encoder', Encoder, enc_callback)
-    # TODO: Add your necessary topic subscriptions / publications, depending on your preferred method of velocity estimation
 
     ecu_pub   = rospy.Publisher('ecu_pwm', ECU, queue_size = 10)
 
     # Set node rate
     loop_rate   = 50
     rate        = rospy.Rate(loop_rate)
-    
-    # TODO: Initialize your PID controller here, with your chosen PI gains
-    PID_control = PID(kp = 1, ki = 1, kd = 0)
+
+    # Initialize the PID controller
+    PID_control = PID(kp=20, ki=5, kd=0.0)
 
     while not rospy.is_shutdown():
         # calculate acceleration from PID controller.
         motor_pwm = PID_control.acc_calculate(v_ref, v_meas) + motor_pwm_offset
-
-        # publish information
  
         # publish control command
         ecu_pub.publish( ECU(motor_pwm, servo_pwm) )
